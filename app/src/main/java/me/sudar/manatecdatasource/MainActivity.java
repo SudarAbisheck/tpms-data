@@ -3,15 +3,11 @@ package me.sudar.manatecdatasource;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.AppCompatDialog;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -22,14 +18,6 @@ import app.akexorcist.bluetotohspp.library.DeviceList;
 public class MainActivity extends AppCompatActivity {
 
     private BluetoothSPP bt = new BluetoothSPP(this);
-    private BluetoothSPP.OnDataReceivedListener  btListener = new BluetoothSPP.OnDataReceivedListener() {
-
-        @Override
-        public void onDataReceived(byte[] data, String message) {
-
-            Toast.makeText(MainActivity.this, data.toString() , Toast.LENGTH_SHORT).show();
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +32,12 @@ public class MainActivity extends AppCompatActivity {
             finish();
         }
 
-        bt.setOnDataReceivedListener(btListener);
+        bt.setOnDataReceivedListener(new BluetoothSPP.OnDataReceivedListener() {
+            @Override
+            public void onDataReceived(byte[] data, String message) {
+                Toast.makeText(MainActivity.this,message,Toast.LENGTH_SHORT).show();
+            }
+        });
 
         bt.setBluetoothConnectionListener(new BluetoothSPP.BluetoothConnectionListener() {
             public void onDeviceConnected(String name, String address) {
@@ -97,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnSend = (Button)findViewById(R.id.btnSend);
         btnSend.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                bt.send("Text", true);
+                new Sender().execute(bt);
             }
         });
     }
@@ -107,7 +100,6 @@ public class MainActivity extends AppCompatActivity {
         if(requestCode == BluetoothState.REQUEST_CONNECT_DEVICE) {
             if(resultCode == Activity.RESULT_OK)
                 bt.connect(data);
-            bt.send("Rapid Data", true);
         } else if(requestCode == BluetoothState.REQUEST_ENABLE_BT) {
             if(resultCode == Activity.RESULT_OK) {
                 bt.setupService();
@@ -119,6 +111,7 @@ public class MainActivity extends AppCompatActivity {
                         , "Bluetooth was not enabled."
                         , Toast.LENGTH_SHORT).show();
                 finish();
+
             }
         }
     }
@@ -126,6 +119,31 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-//        bt.stopService();
+        bt.stopService();
+    }
+
+    class Sender extends AsyncTask<BluetoothSPP, BluetoothSPP, BluetoothSPP> {
+        BluetoothSPP bt;
+        @Override
+        protected BluetoothSPP doInBackground(BluetoothSPP... params) {
+            bt = params[0];
+
+            int j = 0;
+            byte[] data;
+
+            while(j < 10){
+                int i = 0;
+                data = new byte[15];
+                while(i < 15){
+                   data[i] = new Integer((int) (Math.random()*99)).byteValue();
+                   data[i+1] = new Integer((int) (Math.random()*70)).byteValue();
+                   data[i+2] = new Integer((int) (Math.random()*40)).byteValue();
+                   i = i + 3;
+                }
+                bt.send(data,false);
+                j++;
+            }
+            return null;
+        }
     }
 }
